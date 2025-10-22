@@ -10,7 +10,7 @@ import re
 
 app = FastAPI()
 
-def interpret_query(query: str):
+def interpret_query(query: str): # This interprets natural language query
     """
     Interprets simple natural language filters.
     Returns a dictionary of filter parameters.
@@ -50,11 +50,6 @@ def interpret_query(query: str):
 # Create the database tables
 Base.metadata.create_all(bind=engine)
 
-
-# Request schema
-class StringRequest(BaseModel): # Validates that incoming data contains a string field 'value'.
-    value: str
-
 def get_db():
     db = SessionLocal()
     try:
@@ -62,8 +57,15 @@ def get_db():
     finally:
         db.close()
 
+# Request schema (Pydantic)
+class StringRequest(BaseModel): # Validates that incoming data contains a string field 'value'.
+    value: str
+
+
 @app.post("/strings", status_code=201) # Creates the first POST endpoint
 def create_string(request: StringRequest, db: Session = Depends(get_db)):
+    if request.value is None:
+        raise HTTPException(status_code=400, detail="Input must be a string.")
     value = request.value.strip()
 
     # Validate input
@@ -168,8 +170,8 @@ def get_all_strings(
     }
 
 # Natural Language Route
-@app.get("/strings/natural")
-def get_strings_natural(query: str, db: Session = Depends(get_db)):
+@app.get("/strings/filter-by-natural-language")
+def filter_by_natural_language(query: str, db: Session = Depends(get_db)):
     filters = interpret_query(query)
     
     # This will fetch all records first
@@ -208,7 +210,8 @@ def get_strings_natural(query: str, db: Session = Depends(get_db)):
 
 @app.delete("/strings/{string_value}", status_code=204) # This set the success code 204 (No content).
 def delete_string(string_value: str, db: Session = Depends(get_db)):
-    record = db.query(StringRecord). filter(StringRecord.value == string_value).first() # Finds the string record in the database.
+    sha256_hash = analyze_string(string_value.strip())["sha256_hash"]
+    record = db.query(StringRecord).filter(StringRecord.id == sha256_hash).first() # Finds the string record in the database.
     if not record:
         raise HTTPException(status_code=404, detail="String not found.") # If no record is found, raise a 404 error
     
