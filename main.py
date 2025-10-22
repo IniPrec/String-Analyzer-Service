@@ -69,10 +69,10 @@ def create_string(request: StringRequest, db: Session = Depends(get_db)):
     value = request.value.strip()
 
     # Validate input
-    if not isinstance(value, str):
-        raise HTTPException(status_code=400, detail="Input must be a string.")
+    value = request.value.strip()
     if not value:
-        raise HTTPException(status_code=400, detail="Input string cannot be empty.")
+        raise HTTPException(status_code=422, detail="Input string cannot be empty.")
+
 
     # Analyze the string
     properties = analyze_string(value) # Calls the logic from 'utils.py'
