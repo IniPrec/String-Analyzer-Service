@@ -3,6 +3,9 @@
 A RESTful API that analyzes strings and stores their computed properties.  
 Built with **Python (FastAPI)** and **SQLite** for Backend Wizards Stage 1.
 
+## Live Demo
+https://web-production-12cf4.up.railway.app/docs
+
 ## 🚀 Features
 
 - Analyze a string and compute:
@@ -39,3 +42,4 @@ pip install -r requirements.txt
 
 # 4. Run the app
 uvicorn main:app --reload
+```
