@@ -102,6 +102,45 @@ def create_string(request: StringRequest, db: Session = Depends(get_db)):
         "created_at": new_record.created_at
     }
 
+# Natural Language filter
+@app.get("/strings/filter-by-natural-language")
+def filter_by_natural_language(query: str, db: Session = Depends(get_db)):
+    # Interpret the natural language query from the `query` parameter
+    filters = interpret_query(query)
+    records = db.query(StringRecord).all()
+    filtered_records = []
+
+    for record in records:
+        props = record.properties
+        keep = True
+
+        if "is_palindrome" in filters and props["is_palindrome"] != filters["is_palindrome"]:
+            keep = False
+        if "min_length" in filters and props["length"] < filters["min_length"]:
+            keep = False
+        if "max_length" in filters and props["length"] > filters["max_length"]:
+            keep = False
+        if "word_count" in filters and props["word_count"] != filters["word_count"]:
+            keep = False
+        if "contains_character" in filters and filters["contains_character"] not in record.value:
+            keep = False
+
+        if keep:
+            filtered_records.append({
+                "id": record.id,
+                "value": record.value,
+                "properties": props,
+                "created_at": record.created_at.isoformat() + "Z"
+            })
+
+    return {
+        "query": query,
+        "data": filtered_records,
+        "count": len(filtered_records),
+        "interpreted_filters": filters
+    }
+
+
 # GET /string/{string_value} - retrieves a specific string from the database by its raw text
 @app.get("/strings/{string_value}")
 def get_string(string_value: str, db: Session = Depends(get_db)):
@@ -167,45 +206,6 @@ def get_all_strings(
             "word_count": word_count,
             "contains_character": contains_character
         }
-    }
-
-# Natural Language Route
-@app.get("/strings/filter-by-natural-language")
-def filter_by_natural_language(query: str, db: Session = Depends(get_db)):
-    filters = interpret_query(query)
-    
-    # This will fetch all records first
-    records = db.query(StringRecord).all() # This will get all stored strings
-    filtered_records = []
-
-    for record in records: # Loops through the records and applies the filters
-        props = record.properties
-        keep = True
-
-        if "is_palindrome" in filters and props["is_palindrome"] != filters["is_palindrome"]:
-            keep = False
-        if "min_length" in filters and props["length"] < filters["min_length"]:
-            keep = False    
-        if "max_length" in filters and props["length"] > filters["max_length"]:
-            keep = False
-        if "word_count" in filters and props["word_count"] != filters["word_count"]:
-            keep = False
-        if "contains_character" in filters and filters["contains_character"] not in record.value:
-            keep = False
-        
-        if keep:
-            filtered_records.append({ # Adds only matching records to the result list.
-                "id": record.id,
-                "value": record.value,
-                "properties": props,
-                "created_at": record.created_at.isoformat() + "Z"
-            })
-
-    return {
-        "query": query,
-        "data": filtered_records,
-        "count": len(filtered_records),
-        "interpreted_filters": filters
     }
 
 @app.delete("/strings/{string_value}", status_code=204) # This set the success code 204 (No content).
